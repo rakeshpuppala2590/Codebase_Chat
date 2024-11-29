@@ -57,19 +57,26 @@ async function getHuggingFaceEmbeddings(text) {
 }
 
 // Update performRag function
-async function performRag(query) {
+async function performRag(query, namespace) {
   try {
     console.log("Getting embeddings for query:", query);
     const embeddings = await getHuggingFaceEmbeddings(query);
 
     console.log("Querying Pinecone index...");
-    const searchResponse = await index
-      .namespace("https://github.com/pc9350/Calmify")
-      .query({
-        vector: embeddings, // Remove [0] since embeddings is already the vector
-        topK: 5,
-        includeMetadata: true,
-      });
+    // const searchResponse = await index
+    //   .namespace("https://github.com/pc9350/Calmify")
+    //   .query({
+    //     vector: embeddings, // Remove [0] since embeddings is already the vector
+    //     topK: 5,
+    //     includeMetadata: true,
+    //   });
+
+    // Update in route.js
+    const searchResponse = await index.namespace(namespace).query({
+      vector: embeddings,
+      topK: 5,
+      includeMetadata: true,
+    });
 
     console.log("Search response:", {
       matches: searchResponse.matches?.length,
@@ -110,8 +117,8 @@ async function performRag(query) {
 
 export async function POST(request) {
   try {
-    const { query } = await request.json();
-    const response = await performRag(query);
+    const { query, namespace } = await request.json();
+    const response = await performRag(query, namespace);
     return NextResponse.json({ response });
   } catch (error) {
     console.error("API Error:", error);
