@@ -9,6 +9,7 @@ import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-bash";
 import "prismjs/components/prism-json";
 import Sidebar from "./components/Sidebar";
+import { supabase } from "./utils/supabase";
 
 const Chatbot = () => {
   const [input, setInput] = useState("");
@@ -19,6 +20,31 @@ const Chatbot = () => {
   useEffect(() => {
     fetchNamespaces();
   }, []);
+
+  useEffect(() => {
+    if (selectedNamespace) {
+      fetchChatHistory(selectedNamespace);
+    }
+  }, [selectedNamespace]);
+
+  const fetchChatHistory = async (namespace) => {
+    try {
+      const { data, error } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("namespace", namespace)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      setMessages((prev) => ({
+        ...prev,
+        [namespace]: data,
+      }));
+    } catch (error) {
+      console.error("Error fetching chat history:", error);
+    }
+  };
 
   const fetchNamespaces = async () => {
     try {
@@ -67,13 +93,29 @@ const Chatbot = () => {
     e.preventDefault();
     if (!input.trim() || !selectedNamespace) return;
 
-    const userMessage = { sender: "user", text: input };
-    setMessages((prev) => ({
-      ...prev,
-      [selectedNamespace]: [...(prev[selectedNamespace] || []), userMessage],
-    }));
+    const userMessage = {
+      sender: "user",
+      text: input,
+      namespace: selectedNamespace,
+    };
+    // setMessages((prev) => ({
+    //   ...prev,
+    //   [selectedNamespace]: [...(prev[selectedNamespace] || []), userMessage],
+    // }));
 
     try {
+      // Insert user message
+      const { error: userError } = await supabase
+        .from("messages")
+        .insert(userMessage);
+
+      if (userError) throw userError;
+
+      // Update UI
+      setMessages((prev) => ({
+        ...prev,
+        [selectedNamespace]: [...(prev[selectedNamespace] || []), userMessage],
+      }));
       const response = await fetch("/api/get_details", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -87,7 +129,16 @@ const Chatbot = () => {
         sender: "bot",
         text: data.response,
         formatted: formatMessage(data.response),
+        namespace: selectedNamespace,
       };
+
+      // Insert bot message
+      const { error: botError } = await supabase
+        .from("messages")
+        .insert(botMessage);
+
+      if (botError) throw botError;
+
       setMessages((prev) => ({
         ...prev,
         [selectedNamespace]: [...(prev[selectedNamespace] || []), botMessage],
