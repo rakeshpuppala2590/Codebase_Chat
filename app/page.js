@@ -10,12 +10,29 @@ import "prismjs/components/prism-bash";
 import "prismjs/components/prism-json";
 import Sidebar from "./components/Sidebar";
 import { supabase } from "./utils/supabase";
+import MultiNamespaceSelector from "./components/MultiNamespaceSelector";
 
 const Chatbot = () => {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState([]);
   const [namespaces, setNamespaces] = useState([]);
   const [selectedNamespace, setSelectedNamespace] = useState(null);
+  const [showMultiSelect, setShowMultiSelect] = useState(false);
+  const [selectedMultiNamespaces, setSelectedMultiNamespaces] = useState([]);
+  const [isMultiChat, setIsMultiChat] = useState(false);
+
+  const handleMultiNamespaceSelect = (namespace) => {
+    setSelectedMultiNamespaces((prev) =>
+      prev.includes(namespace)
+        ? prev.filter((ns) => ns !== namespace)
+        : [...prev, namespace]
+    );
+  };
+
+  const handleStartMultiChat = () => {
+    setIsMultiChat(true);
+    setShowMultiSelect(false);
+  };
 
   useEffect(() => {
     fetchNamespaces();
@@ -89,6 +106,43 @@ const Chatbot = () => {
       .replace(/\~\~(.*?)\~\~/g, "<del>$1</del>"); // strikethrough text
   };
 
+  const handleMultiSubmit = async (e) => {
+    e.preventDefault();
+    if (!input.trim() || selectedMultiNamespaces.length === 0) return;
+
+    const userMessage = {
+      sender: "user",
+      text: input,
+      namespaces: selectedMultiNamespaces,
+      created_at: new Date().toISOString(),
+    };
+
+    try {
+      const response = await fetch("/api/get_multi_details", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: input,
+          namespaces: selectedMultiNamespaces,
+        }),
+      });
+
+      const data = await response.json();
+
+      const botMessage = {
+        sender: "bot",
+        text: data.response,
+        namespaces: selectedMultiNamespaces,
+        created_at: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, userMessage, botMessage]);
+    } catch (error) {
+      console.error("Error:", error);
+    }
+    setInput("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim() || !selectedNamespace) return;
@@ -156,33 +210,51 @@ const Chatbot = () => {
         selectedNamespace={selectedNamespace}
         onSelect={handleNamespaceSelect}
       />
-      <div className="chat-container">
-        <div className="messages">
-          {(messages[selectedNamespace] || []).map((message, index) => (
-            <div key={index} className={`message ${message.sender}`}>
-              {message.sender === "bot" ? (
-                <div
-                  className="formatted-content"
-                  dangerouslySetInnerHTML={{ __html: message.formatted }}
-                />
-              ) : (
-                <p>{message.text}</p>
-              )}
-            </div>
-          ))}
-        </div>
-        <form onSubmit={handleSubmit} className="input-form">
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about the codebase..."
-            className="chat-input"
-          />
-          <button type="submit" className="submit-btn">
-            Send
+      <div className="flex-1">
+        <div className="p-4 border-b">
+          <button
+            onClick={() => setShowMultiSelect(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            Start Multi-Repository Chat
           </button>
-        </form>
+        </div>
+        <div className="chat-container">
+          <div className="messages">
+            {(messages[selectedNamespace] || []).map((message, index) => (
+              <div key={index} className={`message ${message.sender}`}>
+                {message.sender === "bot" ? (
+                  <div
+                    className="formatted-content"
+                    dangerouslySetInnerHTML={{ __html: message.formatted }}
+                  />
+                ) : (
+                  <p>{message.text}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <form onSubmit={handleSubmit} className="input-form">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about the codebase..."
+              className="chat-input"
+            />
+            <button type="submit" className="submit-btn">
+              Send
+            </button>
+          </form>
+        </div>
       </div>
+      {showMultiSelect && (
+        <MultiNamespaceSelector
+          namespaces={namespaces}
+          selectedNamespaces={selectedMultiNamespaces}
+          onSelect={handleMultiNamespaceSelect}
+          onStartChat={handleStartMultiChat}
+        />
+      )}
     </div>
   );
 };
