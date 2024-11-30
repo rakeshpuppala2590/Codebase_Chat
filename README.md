@@ -31,3 +31,8 @@ This project is a chatbot application designed to interact with multiple reposit
 ```bash
 git clone https://github.com/rakeshpuppala2590/Codebase_Chat.git
 cd Codebase_Chat
+
+### How to run
+
+npm install
+npm run dev
