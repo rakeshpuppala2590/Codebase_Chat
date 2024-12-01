@@ -25,6 +25,12 @@ const Chatbot = () => {
   const [multiChatMessages, setMultiChatMessages] = useState([]);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      Prism.highlightAll();
+    }
+  }, [messages, multiChatMessages]);
+
+  useEffect(() => {
     fetchNamespaces();
   }, []);
 
@@ -83,27 +89,27 @@ const Chatbot = () => {
     setShowMultiSelect(false);
   };
 
-  const formatMessage = (text) => {
-    if (!text) return "";
+  // const formatMessage = (text) => {
+  //   if (!text) return "";
 
-    if (typeof window !== "undefined") {
-      Prism.highlightAll();
-    }
+  //   if (typeof window !== "undefined") {
+  //     Prism.highlightAll();
+  //   }
 
-    return text
-      .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
-        const language = lang || "javascript";
-        const highlightedCode = Prism.highlight(
-          code.trim(),
-          Prism.languages[language] || Prism.languages.javascript,
-          language
-        );
-        return `<pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre>`;
-      })
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/\~\~(.*?)\~\~/g, "<del>$1</del>");
-  };
+  //   return text
+  //     .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) => {
+  //       const language = lang || "javascript";
+  //       const highlightedCode = Prism.highlight(
+  //         code.trim(),
+  //         Prism.languages[language] || Prism.languages.javascript,
+  //         language
+  //       );
+  //       return `<pre class="language-${language}"><code class="language-${language}">${highlightedCode}</code></pre>`;
+  //     })
+  //     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+  //     .replace(/\*(.*?)\*/g, "<em>$1</em>")
+  //     .replace(/\~\~(.*?)\~\~/g, "<del>$1</del>");
+  // };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
